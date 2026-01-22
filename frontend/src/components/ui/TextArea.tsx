@@ -1,0 +1,38 @@
+import { TextareaHTMLAttributes, forwardRef } from 'react'
+
+interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string
+  error?: string
+}
+
+export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
+  ({ label, error, className = '', ...props }, ref) => {
+    return (
+      <div className="w-full">
+        {label && (
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+            {label}
+          </label>
+        )}
+        <textarea
+          ref={ref}
+          className={`
+            w-full px-4 py-2 border rounded-lg
+            focus:ring-2 focus:ring-blue-500 focus:border-transparent
+            bg-white dark:bg-gray-700 
+            border-gray-300 dark:border-gray-600
+            text-gray-900 dark:text-white
+            placeholder-gray-400 dark:placeholder-gray-500
+            transition-colors resize-none
+            ${error ? 'border-red-500 focus:ring-red-500' : ''}
+            ${className}
+          `}
+          {...props}
+        />
+        {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+      </div>
+    )
+  }
+)
+
+TextArea.displayName = 'TextArea'
