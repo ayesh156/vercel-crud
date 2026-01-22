@@ -38,6 +38,7 @@ vercel-crud/
 - MySQL database (local development)
 - npm (v7+ for workspaces)
 - Vercel account (for deployment)
+- Supabase account (for PostgreSQL database)
 - Git & GitHub account
 
 ---
@@ -54,13 +55,13 @@ npm install
 
 ### 2. Configure Database (MySQL Local)
 
-Edit `backend/.env`:
+Edit `backend/.env.local`:
 
 ```env
 DATABASE_URL="mysql://root:YOUR_PASSWORD@localhost:3306/vercel_crud"
 ```
 
-⚠️ **Important**: Make sure `backend/prisma/schema.prisma` has:
+⚠️ **For Local Development with MySQL**, update `backend/prisma/schema.prisma`:
 ```prisma
 datasource db {
   provider = "mysql"
@@ -113,22 +114,29 @@ This starts:
 
 ---
 
-# 🚀 VERCEL DEPLOYMENT GUIDE
+# 🚀 VERCEL + SUPABASE DEPLOYMENT GUIDE
 
-Complete step-by-step guide to deploy your application on Vercel.
+Complete step-by-step guide to deploy your application on Vercel with Supabase PostgreSQL database.
 
 ---
 
-## 📝 STEP 1: Create Vercel Account
+## 📝 STEP 1: Create Accounts
 
-### 1.1 Sign Up
+### 1.1 Create Vercel Account
 1. Go to **[vercel.com](https://vercel.com)**
 2. Click **"Sign Up"**
 3. Choose **"Continue with GitHub"** (recommended)
 4. Authorize Vercel to access your GitHub account
 5. Complete the signup process
 
-### 1.2 Install Vercel CLI (Optional but Recommended)
+### 1.2 Create Supabase Account
+1. Go to **[supabase.com](https://supabase.com)**
+2. Click **"Start your project"** or **"Sign Up"**
+3. Choose **"Continue with GitHub"** (recommended)
+4. Authorize Supabase to access your GitHub account
+5. Complete the signup process
+
+### 1.3 Install Vercel CLI (Optional)
 ```bash
 npm install -g vercel
 ```
@@ -137,68 +145,122 @@ Then login:
 ```bash
 vercel login
 ```
-- Choose GitHub
-- Browser will open for authentication
 
 ---
 
-## 🗄️ STEP 2: Create Vercel Postgres Database
+## 🗄️ STEP 2: Create Supabase PostgreSQL Database
 
-### 2.1 Open Vercel Dashboard
-1. Go to **[vercel.com/dashboard](https://vercel.com/dashboard)**
-2. Click **"Storage"** in the top navigation bar
+### 2.1 Create New Project
+1. Go to **[supabase.com/dashboard](https://supabase.com/dashboard)**
+2. Click **"New Project"**
 
-### 2.2 Create Database
-1. Click **"Create Database"** button
-2. Select **"Postgres"** (Powered by Neon)
-3. Click **"Continue"**
+### 2.2 Configure Project
+Fill in the details:
+- **Name**: `vercel-crud` (or any name you prefer)
+- **Database Password**: Create a strong password (📝 **Save this!**)
+- **Region**: Choose closest to your users:
+  - `Southeast Asia (Singapore)` - For Sri Lanka/Asia
+  - `West EU (Ireland)` - For Europe
+  - `East US (North Virginia)` - For USA
+- **Pricing Plan**: Free tier is enough for learning
 
-### 2.3 Configure Database Settings
-- **Database Name**: `vercel-crud-db` (or any name you prefer)
-- **Region**: Choose closest to your target users
-  - `Washington, D.C., USA (iad)` - US East
-  - `San Francisco, USA (sfo)` - US West  
-  - `Frankfurt, Germany (fra)` - Europe
-  - `Singapore (sin)` - Asia
-- Click **"Create"**
+### 2.3 Create Project
+1. Click **"Create new project"**
+2. Wait 1-2 minutes for project setup
+3. You'll be redirected to the project dashboard
 
-### 2.4 Save Database Connection String
-1. After creation, you'll see the database dashboard
-2. Go to **"Quickstart"** tab
-3. Under **"Postgres"**, you'll see connection strings
-4. Copy the **"Postgres URL"** (pooled connection):
+### 2.4 Get Database Connection String
+
+#### Method 1: Connection String (Recommended)
+1. In your Supabase project dashboard
+2. Click **"Project Settings"** (gear icon) in the sidebar
+3. Click **"Database"** in the settings menu
+4. Scroll to **"Connection string"** section
+5. Select **"URI"** tab
+6. Copy the connection string:
    ```
-   postgres://default:xxxxx@ep-xxxxx.us-east-1.aws.neon.tech:5432/verceldb?sslmode=require
+   postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
    ```
-5. **📝 Save this somewhere safe** - you'll need it!
 
-> ⚠️ **Note**: Keep this connection string private!
+#### Method 2: Connection Pooler (For Serverless - Better for Vercel)
+1. In **"Database"** settings
+2. Go to **"Connection Pooling"** section
+3. Copy the **"Connection string"** with pooler:
+   ```
+   postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true
+   ```
+
+### 2.5 Important Connection String Details
+
+| Part | Example | Description |
+|------|---------|-------------|
+| Protocol | `postgresql://` | Database type |
+| User | `postgres.[ref]` | Your project user |
+| Password | `[YOUR-PASSWORD]` | Password you created |
+| Host | `aws-0-ap-southeast-1.pooler.supabase.com` | Supabase server |
+| Port | `6543` | Pooler port (or `5432` for direct) |
+| Database | `postgres` | Default database |
+
+⚠️ **Replace `[YOUR-PASSWORD]`** with the actual password you created in Step 2.2!
 
 ---
 
 ## 🔄 STEP 3: Update Schema for PostgreSQL
 
-Since we're using MySQL locally but PostgreSQL on Vercel, update the schema:
-
 ### 3.1 Update Prisma Schema
 Edit `backend/prisma/schema.prisma`:
 
 ```prisma
+// Prisma Schema for CRUD Application
+// PostgreSQL for Vercel/Supabase deployment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
-  provider = "postgresql"  // Changed from mysql
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// User Model
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+}
+
+// Post Model
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 ```
 
-### 3.2 Create Temporary Environment File
-Create `backend/.env.production.local` (for migration only):
+### 3.2 Update Backend Environment File
+Edit `backend/.env`:
 
 ```env
-DATABASE_URL="postgres://default:xxxxx@ep-xxxxx.aws.neon.tech:5432/verceldb?sslmode=require"
-```
-Replace with your actual connection string from Step 2.4.
+# Supabase PostgreSQL - Pooled Connection (for queries)
+DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
 
-### 3.3 Run Migration to Vercel Database
+# Supabase PostgreSQL - Direct Connection (for migrations)
+DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+```
+
+⚠️ **Replace with your actual Supabase connection strings!**
+
+### 3.3 Run Migration to Supabase
 ```bash
 cd backend
 npx prisma generate
@@ -207,31 +269,13 @@ npx prisma db push
 
 You should see:
 ```
-✅ The database is now in sync with your schema.
+🚀 Your database is now in sync with your Prisma schema.
 ```
 
-### 3.4 Verify Tables (Optional)
-```bash
-npx prisma studio
-```
-- This opens a web UI to view your Vercel database
-- You should see `User` and `Post` tables (empty)
-
-### 3.5 Revert Back to MySQL for Local Development
-Edit `backend/prisma/schema.prisma`:
-
-```prisma
-datasource db {
-  provider = "mysql"  // Back to mysql for local dev
-  url      = env("DATABASE_URL")
-}
-```
-
-Then regenerate:
-```bash
-npx prisma generate
-cd ..
-```
+### 3.4 Verify Tables in Supabase
+1. Go to Supabase Dashboard
+2. Click **"Table Editor"** in sidebar
+3. You should see `User` and `Post` tables
 
 ---
 
@@ -243,8 +287,8 @@ cd d:\Learning\MERN\vercel-crud
 git init
 ```
 
-### 4.2 Create .gitignore
-Make sure `.gitignore` exists with:
+### 4.2 Check .gitignore
+Make sure `.gitignore` includes:
 ```
 node_modules/
 .env
@@ -259,27 +303,22 @@ build/
 ### 4.3 Commit Your Code
 ```bash
 git add .
-git commit -m "Initial commit: Vercel CRUD with React + Next.js + Prisma"
+git commit -m "Initial commit: Vercel CRUD with Supabase"
 ```
 
 ### 4.4 Create GitHub Repository
 1. Go to **[github.com/new](https://github.com/new)**
-2. **Repository name**: `vercel-crud` (or any name)
-3. **Description**: "Full-stack CRUD app with React, Next.js, and Prisma"
-4. Choose **Public** or **Private**
-5. **DON'T** check "Add README" (we already have one)
-6. Click **"Create repository"**
+2. **Repository name**: `vercel-crud`
+3. Choose **Public** or **Private**
+4. **DON'T** check "Add README"
+5. Click **"Create repository"**
 
 ### 4.5 Push to GitHub
-Copy the commands from GitHub (replace with your username):
-
 ```bash
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/vercel-crud.git
 git push -u origin main
 ```
-
-**✅ Your code is now on GitHub!**
 
 ---
 
@@ -290,46 +329,35 @@ git push -u origin main
 2. Click **"Add New..."** → **"Project"**
 
 ### 5.2 Import GitHub Repository
-1. You'll see **"Import Git Repository"**
-2. If your repo doesn't appear, click **"Adjust GitHub App Permissions"**
-3. Select your **`vercel-crud`** repository
-4. Click **"Import"**
+1. Select your **`vercel-crud`** repository
+2. Click **"Import"**
 
 ### 5.3 Configure Backend Project
-1. **Framework Preset**: Select **"Next.js"**
-2. **Root Directory**: Click **"Edit"** → Select **`backend`**
-3. **Project Name**: `vercel-crud-backend` (or any name)
+1. **Project Name**: `vercel-crud-backend`
+2. **Framework Preset**: **Next.js**
+3. **Root Directory**: Click **"Edit"** → Select **`backend`**
 
 ### 5.4 Set Environment Variables
-Click **"Environment Variables"** section:
-
-Add the following:
+Click **"Environment Variables"** and add:
 
 | Name | Value |
 |------|-------|
-| `DATABASE_URL` | `postgres://default:xxxxx@ep-xxxxx.aws.neon.tech:5432/verceldb?sslmode=require` |
+| `DATABASE_URL` | `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true` |
+| `DIRECT_URL` | `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres` |
 
-- Paste your Vercel Postgres connection string from Step 2.4
-- Make sure to select all environments: **Production**, **Preview**, **Development**
+⚠️ Use your actual Supabase connection strings!
 
 ### 5.5 Deploy
 1. Click **"Deploy"**
-2. Wait for build to complete (2-3 minutes)
-3. You'll see: **"🎉 Your project has been deployed"**
+2. Wait 2-3 minutes for build
+3. You'll get URL: `https://vercel-crud-backend-xxx.vercel.app`
 
-### 5.6 Get Backend URL
-After deployment:
-- You'll see your backend URL: `https://vercel-crud-backend-xxx.vercel.app`
-- **📝 Copy this URL** - you'll need it for the frontend!
-
-### 5.7 Test Backend API
+### 5.6 Test Backend
 Open in browser:
 ```
 https://vercel-crud-backend-xxx.vercel.app/api/users
 ```
 Should return: `[]` (empty array)
-
-**✅ Backend is deployed!**
 
 ---
 
@@ -341,12 +369,13 @@ Create `frontend/.env.production`:
 ```env
 VITE_API_URL=https://vercel-crud-backend-xxx.vercel.app/api
 ```
-**Important**: Replace `xxx` with your actual backend URL from Step 5.6.
 
-### 6.2 Commit Environment File
+**Replace `xxx`** with your actual backend URL from Step 5.5.
+
+### 6.2 Commit and Push
 ```bash
 git add frontend/.env.production
-git commit -m "Add production environment config"
+git commit -m "Add frontend production config"
 git push
 ```
 
@@ -355,38 +384,24 @@ git push
 2. Click **"Add New..."** → **"Project"**
 
 ### 6.4 Import Same Repository Again
-1. Select your **`vercel-crud`** repository again
+1. Select your **`vercel-crud`** repository
 2. Click **"Import"**
 
 ### 6.5 Configure Frontend Project
-1. **Framework Preset**: Select **"Vite"**
-2. **Root Directory**: Click **"Edit"** → Select **`frontend`**
-3. **Project Name**: `vercel-crud-frontend` (or any name)
+1. **Project Name**: `vercel-crud-frontend`
+2. **Framework Preset**: **Vite**
+3. **Root Directory**: Click **"Edit"** → Select **`frontend`**
 
-### 6.6 Set Build Settings
-Build settings should be auto-detected:
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist`
-- **Install Command**: `npm install`
-
-### 6.7 Deploy
+### 6.6 Deploy
 1. Click **"Deploy"**
-2. Wait for build to complete (1-2 minutes)
-3. You'll see: **"🎉 Your project has been deployed"**
-
-### 6.8 Get Frontend URL
-After deployment:
-- You'll see your frontend URL: `https://vercel-crud-frontend-xxx.vercel.app`
-- This is your live application!
-
-**✅ Frontend is deployed!**
+2. Wait 1-2 minutes
+3. You'll get URL: `https://vercel-crud-frontend-xxx.vercel.app`
 
 ---
 
-## 🎉 STEP 7: Test Your Deployed Application
+## 🎉 STEP 7: Test Your Application
 
 ### 7.1 Open Your Application
-Go to your frontend URL:
 ```
 https://vercel-crud-frontend-xxx.vercel.app
 ```
@@ -394,154 +409,109 @@ https://vercel-crud-frontend-xxx.vercel.app
 ### 7.2 Test CRUD Operations
 
 #### Test Users:
-1. **Create User**:
-   - Name: `John Doe`
-   - Email: `john@example.com`
-   - Click **"Create User"**
-2. **Verify**: User should appear in the list on the right
-3. **Edit User**: Click "Edit", change name, save
-4. **Delete User**: Click "Delete" (confirm dialog)
+1. Create user with name and email
+2. Edit user - click "Edit"
+3. Delete user - click "Delete"
 
 #### Test Posts:
-1. Click **"Posts"** tab
-2. **Create Post**:
-   - Select a user as author
-   - Title: `My First Post`
-   - Content: `This is deployed on Vercel!`
-   - Check "Published"
-   - Click **"Create Post"**
-3. **Verify**: Post appears in the list
-4. **Edit/Delete**: Test edit and delete operations
+1. Click "Posts" tab
+2. Select author, add title and content
+3. Create, edit, and delete posts
 
-### 7.3 Verify Data Persistence
-1. Refresh the page - data should persist
-2. Open in incognito/private window - data should still be there
-3. Check from another device - should see same data
-
-**🎊 Congratulations! Your app is live on Vercel!**
-
----
-
-## 🔄 STEP 8: Enable Automatic Deployments
-
-### 8.1 Connect Git for Auto-Deploy
-Your projects are already connected! Every time you push to GitHub:
-- Commits to `main` → Production deployment
-- Pull requests → Preview deployments
-
-### 8.2 Test Auto-Deploy
-1. Make a small change locally (e.g., update a text)
-2. Commit and push:
-   ```bash
-   git add .
-   git commit -m "Update homepage text"
-   git push
-   ```
-3. Go to Vercel Dashboard
-4. You'll see automatic deployment in progress
-5. Wait 1-2 minutes
-6. Your changes are live!
+### 7.3 Verify Data in Supabase
+1. Go to Supabase Dashboard
+2. Click **"Table Editor"**
+3. See your data in `User` and `Post` tables!
 
 ---
 
 ## 🔧 TROUBLESHOOTING
 
-### ❌ Problem: "Database connection failed"
-**Solution**: 
-1. Check `DATABASE_URL` in Vercel project settings
-2. Make sure it starts with `postgres://` (not `mysql://`)
-3. Redeploy the backend
-
-### ❌ Problem: "API not found" (404 on /api/users)
+### ❌ "Database connection failed"
 **Solution**:
-1. Check backend deployment logs in Vercel dashboard
-2. Make sure `ROOT_DIRECTORY` is set to `backend`
-3. Verify build completed successfully
+1. Check `DATABASE_URL` in Vercel environment variables
+2. Make sure password is correct (no special characters issues)
+3. Try using connection pooler URL with `?pgbouncer=true`
 
-### ❌ Problem: Frontend shows "Network Error"
+### ❌ "relation does not exist"
 **Solution**:
-1. Check `VITE_API_URL` in frontend `.env.production`
-2. Make sure backend URL is correct
-3. Check CORS is enabled in `backend/next.config.js` (already configured)
-4. Redeploy frontend
-
-### ❌ Problem: "Prisma Client not generated"
-**Solution**:
+Run migration again:
 ```bash
 cd backend
-npx prisma generate
-git add .
-git commit -m "Regenerate Prisma client"
-git push
+npx prisma db push
 ```
 
-### ❌ Problem: Build fails on Vercel
+### ❌ "Invalid `prisma.user.findMany()` invocation"
 **Solution**:
-1. Check build logs in Vercel dashboard
-2. Make sure all dependencies are in `package.json`
-3. Verify Node.js version (should be 18+)
+1. Regenerate Prisma client:
+   ```bash
+   npx prisma generate
+   ```
+2. Redeploy on Vercel
+
+### ❌ "CORS error" or "Network Error"
+**Solution**:
+1. Check `VITE_API_URL` in frontend
+2. Verify backend URL is correct
+3. Check backend is deployed and running
+
+### ❌ Password Contains Special Characters
+If your Supabase password has special characters, URL-encode them:
+
+| Character | Encoded |
+|-----------|---------|
+| `@` | `%40` |
+| `#` | `%23` |
+| `$` | `%24` |
+| `%` | `%25` |
+| `&` | `%26` |
+| `+` | `%2B` |
+| `/` | `%2F` |
+| `=` | `%3D` |
+
+Example: `pass@word` → `pass%40word`
 
 ---
 
-## 📊 MONITORING YOUR APPLICATION
+## 📊 SUPABASE DASHBOARD FEATURES
+
+### View Tables
+1. Click **"Table Editor"** in sidebar
+2. See all your tables and data
+3. Add/edit/delete rows directly
 
 ### View Logs
-1. Go to Vercel Dashboard
-2. Click your project
-3. Go to **"Logs"** tab
-4. See real-time logs of your application
+1. Click **"Database"** → **"Database"**
+2. See query logs and performance
 
-### View Analytics
-1. Go to project → **"Analytics"** tab
-2. See visitor count, page views, etc.
-
-### View Deployment History
-1. Go to project → **"Deployments"** tab
-2. See all deployments
-3. Rollback to previous version if needed
+### Connection Info
+1. Click **"Project Settings"** → **"Database"**
+2. See all connection details
 
 ---
 
-## 🔄 UPDATING YOUR APPLICATION
+## 🔄 LOCAL DEVELOPMENT WITH MYSQL
 
-### Method 1: Push to GitHub (Automatic)
-```bash
-# Make your changes
-git add .
-git commit -m "Add new feature"
-git push
+To develop locally with MySQL instead of Supabase:
+
+### 1. Create `.env.local` in backend:
+```env
+DATABASE_URL="mysql://root:password@localhost:3306/vercel_crud"
 ```
-Vercel automatically deploys!
 
-### Method 2: Redeploy from Dashboard
-1. Go to Vercel Dashboard → Your Project
-2. Go to **"Deployments"** tab
-3. Click ⋯ on latest deployment
-4. Click **"Redeploy"**
+### 2. Update schema for MySQL:
+```prisma
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+```
 
----
-
-## 🌍 CUSTOM DOMAIN (Optional)
-
-### Add Your Own Domain
-1. Go to Vercel Project → **"Settings"**
-2. Click **"Domains"**
-3. Add your domain (e.g., `myapp.com`)
-4. Follow DNS configuration instructions
-5. Wait for DNS propagation (5-10 minutes)
-
----
-
-## 💰 PRICING
-
-### Free Plan Includes:
-- ✅ Unlimited deployments
-- ✅ 100GB bandwidth
-- ✅ 6,000 build minutes/month
-- ✅ Automatic HTTPS
-- ✅ Global CDN
-
-**Perfect for learning and personal projects!**
+### 3. Regenerate and push:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
 ---
 
@@ -566,7 +536,7 @@ Vercel automatically deploys!
 │   ├── userService.ts
 │   └── postService.ts
 └── types/
-    └── index.ts      # TypeScript interfaces
+    └── index.ts
 ```
 
 ### Backend (`backend/`)
@@ -576,12 +546,12 @@ Vercel automatically deploys!
 │   │   ├── route.ts      # GET all, POST
 │   │   └── [id]/route.ts # GET, PUT, DELETE
 │   └── posts/
-│       ├── route.ts      # GET all, POST
-│       └── [id]/route.ts # GET, PUT, DELETE
+│       ├── route.ts
+│       └── [id]/route.ts
 ├── lib/
-│   └── prisma.ts         # Prisma client
+│   └── prisma.ts
 └── prisma/
-    └── schema.prisma     # Database schema
+    └── schema.prisma
 ```
 
 ---
@@ -589,20 +559,68 @@ Vercel automatically deploys!
 ## 📚 USEFUL LINKS
 
 - **Vercel Dashboard**: [vercel.com/dashboard](https://vercel.com/dashboard)
+- **Supabase Dashboard**: [supabase.com/dashboard](https://supabase.com/dashboard)
+- **Supabase Docs**: [supabase.com/docs](https://supabase.com/docs)
+- **Prisma + Supabase**: [prisma.io/docs/guides/database/supabase](https://www.prisma.io/docs/guides/database/supabase)
 - **Vercel Docs**: [vercel.com/docs](https://vercel.com/docs)
-- **Prisma Docs**: [prisma.io/docs](https://www.prisma.io/docs)
-- **Next.js Docs**: [nextjs.org/docs](https://nextjs.org/docs)
-- **React Docs**: [react.dev](https://react.dev)
 
 ---
 
-## 🙋 SUPPORT
+## 💰 PRICING
 
-If you encounter any issues:
-1. Check the **Troubleshooting** section above
-2. Review Vercel deployment logs
-3. Verify all environment variables
-4. Check GitHub Actions (if configured)
+### Supabase Free Tier Includes:
+- ✅ 500 MB database storage
+- ✅ 2 GB bandwidth
+- ✅ 50,000 monthly active users
+- ✅ Unlimited API requests
+- ✅ Social auth providers
+
+### Vercel Free Tier Includes:
+- ✅ Unlimited deployments
+- ✅ 100 GB bandwidth
+- ✅ Automatic HTTPS
+- ✅ Global CDN
+
+---
+
+## 📋 QUICK REFERENCE
+
+### Environment Variables Summary
+
+**Local Development (`.env.local`)**:
+```env
+DATABASE_URL="mysql://root:password@localhost:3306/vercel_crud"
+```
+
+**Vercel Backend**:
+```env
+DATABASE_URL="postgresql://postgres.[ref]:[password]@...pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.[ref]:[password]@...pooler.supabase.com:5432/postgres"
+```
+
+**Vercel Frontend (`.env.production`)**:
+```env
+VITE_API_URL=https://your-backend.vercel.app/api
+```
+
+### Important Commands
+```bash
+# Install dependencies
+npm install
+
+# Local development
+npm run dev
+
+# Database
+npx prisma generate    # Generate client
+npx prisma db push     # Push schema
+npx prisma studio      # View data
+
+# Deploy (auto via git push)
+git add .
+git commit -m "Update"
+git push
+```
 
 ---
 
@@ -612,48 +630,4 @@ MIT
 
 ---
 
-**🎉 Happy Deploying! Your app is now live on the internet!** 🚀
-
----
-
-## 📋 QUICK REFERENCE
-
-### Local Development URLs
-- Frontend: http://localhost:3000
-- Backend: http://localhost:3001
-
-### Production URLs (Example)
-- Frontend: `https://vercel-crud-frontend-xxx.vercel.app`
-- Backend: `https://vercel-crud-backend-xxx.vercel.app`
-- API: `https://vercel-crud-backend-xxx.vercel.app/api`
-
-### Important Commands
-```bash
-# Local Development
-npm install              # Install dependencies
-npm run dev             # Run both servers
-npm run db:push         # Push schema to database
-
-# Deployment
-git push                # Auto-deploy via GitHub
-vercel                  # Manual deploy via CLI
-
-# Database
-npx prisma studio       # View database
-npx prisma db push      # Push schema changes
-```
-
-### Environment Variables Summary
-
-**Local (.env)**:
-- `DATABASE_URL` = MySQL connection (local)
-
-**Vercel Backend**:
-- `DATABASE_URL` = PostgreSQL connection (Vercel Postgres)
-
-**Vercel Frontend**:
-- `VITE_API_URL` = Backend URL
-
----
-
-**All Done! 🎊 You now have a production-ready full-stack application!**
+**🎉 Happy Deploying with Vercel + Supabase!** 🚀

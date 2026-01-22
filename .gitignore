@@ -24,6 +24,7 @@ yarn-error.log*
 # Local env files
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
 .env.production.local
@@ -33,3 +34,12 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
+
+
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local

@@ -1,18 +1,17 @@
 // Prisma Schema for CRUD Application
-// Supports both PostgreSQL (Vercel) and MySQL (Local)
+// PostgreSQL for Vercel/Supabase deployment
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// PostgreSQL for Vercel Deployment
-// Use mysql locally (create .env.local with mysql URL)
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// User Model - Sample CRUD entity
+// User Model
 model User {
   id        Int      @id @default(autoincrement())
   name      String
@@ -22,7 +21,7 @@ model User {
   posts     Post[]
 }
 
-// Post Model - Sample CRUD entity with relation
+// Post Model
 model Post {
   id        Int      @id @default(autoincrement())
   title     String
