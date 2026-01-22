@@ -372,6 +372,21 @@ VITE_API_URL=https://vercel-crud-backend-xxx.vercel.app/api
 
 **Replace `xxx`** with your actual backend URL from Step 5.5.
 
+### 6.1.1 Set Vercel Environment Variable (recommended)
+Instead of (or in addition to) committing `frontend/.env.production`, set the environment variable in the Vercel project to keep secrets out of source control:
+
+1. Open your frontend project in the Vercel dashboard.
+2. Go to **Settings** → **Environment Variables**.
+3. Add a variable:
+  - **Name**: `VITE_API_URL`
+  - **Value**: `https://vercel-crud-backend-xxx.vercel.app/api` (replace `xxx`)
+  - **Environment**: `Production`
+4. Save the variable and re-deploy the frontend.
+
+Notes:
+- Vite exposes variables starting with `VITE_` to the client, so only set non-sensitive endpoints here. Do not store secrets like DB passwords or service-role keys in client-exposed variables.
+- If you do commit `frontend/.env.production`, ensure `.gitignore` and repository policies meet your security requirements.
+
 ### 6.2 Commit and Push
 ```bash
 git add frontend/.env.production

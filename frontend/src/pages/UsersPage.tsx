@@ -4,7 +4,7 @@ import { useUsers, useToast } from '../hooks'
 import type { User, CreateUserDto, UpdateUserDto } from '../types'
 
 export function UsersPage() {
-  const { users, loading, createUser, updateUser, deleteUser, refetch } = useUsers()
+  const { users, loading, createUser, updateUser, deleteUser } = useUsers()
   const { toasts, success, error, dismiss } = useToast()
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [submitting, setSubmitting] = useState(false)
