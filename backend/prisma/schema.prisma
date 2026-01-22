@@ -5,10 +5,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// MySQL for Local Development
-// Change to postgresql for Vercel deployment
+// PostgreSQL for Vercel Deployment
+// Use mysql locally (create .env.local with mysql URL)
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
